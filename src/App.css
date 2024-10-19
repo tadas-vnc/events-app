@@ -1,0 +1,87 @@
+:root{
+  color-scheme: only dark;
+}
+
+body {
+  text-align: center;
+  color:white;
+  background-color: rgb(25, 25, 27) !important; 
+  width: 100dvw;
+  height: 100dvh;
+  margin: 0px;
+}
+
+.login-block{
+  color:white;
+  border-radius: 25px;
+  outline: 3px solid rgb(44, 44, 48);
+  
+}
+
+.fullpage-center{
+  display: flex;
+  width: 100dvw;
+  height: 100dvh;
+  align-items: center;
+  justify-content: center;
+  
+}
+
+.fullpage-center-vertical{
+  display: flex;
+  width: 100dvw;
+  min-height: 100dvh;
+  align-items: center;
+  flex-direction: column;
+}
+
+.spinner-container {
+  position: relative;
+  width: 100px; /* Set your desired width */
+  height: 100px; /* Set your desired height */
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  animation: spin 1s ease-in-out infinite;
+}
+
+.spinner-container > div {
+  width: 100%;
+  height: 100%;
+  border-color: white transparent white transparent;
+  border-radius: 50%;
+  border-style: solid;
+  border-width: 10px;
+  box-sizing: border-box;
+}
+
+@keyframes spin {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+.input-group > .input-group-text{
+  font-family: "Segoe UI Symbol", monospace;
+}
+
+@media(orientation: landscape){
+.nav-dropdown{
+  display: none;
+}
+}
+@media(orientation: portrait){
+  .nav-links{
+    display: none;
+  }
+}
+.posts{
+  margin-top: 1rem;
+  width: 800px;
+  max-width: 99dvw;
+  justify-content: center;
+  display: flex;
+}
