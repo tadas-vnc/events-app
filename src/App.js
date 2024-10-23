@@ -35,6 +35,7 @@ const baseUrlLogout = `${window.location.protocol}//${window.location.hostname}:
 const baseUrlCategoryCreate = `${window.location.protocol}//${window.location.hostname}:4000/api/create-category`;
 const baseUrlCategory = `${window.location.protocol}//${window.location.hostname}:4000/api/category`;
 const baseUrlSearchUsers = `${window.location.protocol}//${window.location.hostname}:4000/api/search-users`;
+const baseUrlPunishment = `${window.location.protocol}//${window.location.hostname}:4000/api/punishment`;
 function SignUpForm() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -215,9 +216,12 @@ function LoginForm() {
             setIsLoading(false);
             setError(data.error);
             return;
-          }
+          }else if(data.ban != null){
+            setIsLoading(false);
+            setError(data.message + "\nReason: "+ data.ban.reason + "\nExpires: " + data!= null ? new Date(data.expires*1000).toLocaleString() : "Never");
+          }else{
           localStorage.setItem("token", data.token);
-          window.location.href = "/";
+          window.location.href = "/";}
         })
         .catch(error => {
           setError('There has been a problem with fetch operation: ' + error.toString());
@@ -239,7 +243,7 @@ function LoginForm() {
             <h2 className="text-center">Login</h2>
             <p className='text-center'>Choose to login with username or email.</p>
             {error && (
-              <Alert variant="danger" onClose={() => setError('')} dismissible>
+              <Alert style={{"whiteSpace":"pre"}} variant="danger" onClose={() => setError('')} dismissible>
                 {error}
               </Alert>
             )}
@@ -437,14 +441,17 @@ function NewPostForm(props) {
         if(data.error != null){
           setError(data.error)
           setSubmitDisabled(false)
+        }else if(data.mute != null){
+          setError(data.message + "\nReason: "+data.mute.reason + "\nExpires: " + (data.mute.expires ? new Date(data.mute.expires*1000).toLocaleString() : "Never"))
+          setSubmitDisabled(false)
         }else{
           setSuccess(data.message)
           setSubmitDisabled(false)
           if(!editingMode){
-          setName("")
-          setLocation("")
-          setSelectedFile(null)
-          setCategory(null)
+            setName("")
+            setLocation("")
+            setSelectedFile(null)
+            setCategory(null)
           }else{
             props.setCategory_name(data.data.category_name)
             props.setName(data.data.name)
@@ -518,12 +525,12 @@ function NewPostForm(props) {
               
               <div className='w-100'></div>
               {error && (
-              <Alert variant="danger" onClose={() => setError('')} dismissible>
+              <Alert style={{"whiteSpace":"pre"}} variant="danger" onClose={() => setError('')} dismissible>
                 {error}
               </Alert>
             )}
             {success && (
-              <Alert variant="success" onClose={() => setSuccess('')} dismissible>
+              <Alert style={{"whiteSpace":"pre"}} variant="success" onClose={() => setSuccess('')} dismissible>
                 {success}
               </Alert>
             )}
@@ -682,42 +689,162 @@ function CategoriesForm(props) {
   </>)
 }
 
+
+
 function PunishmentsDisplay(props){
   const user = props.user
   const [punishments, setPunishments] = useState([])
-  
+  const [loadingPunishments, setLoadingPunishments] = useState(true);
+  const [punishmentsError, setPunishmentsError] = useState('');
+  const [activeButton, setActiveButton] = useState(true);
+  function fetchPunishments(){
+    fetch(baseUrlUser + "/"+user.id+"/punishments",{headers:{Authorization:props.token}}).then(res=>{return res.json();}).then(data=>{
+      if(data.error != null){
+        setPunishmentsError(data.error)
+      }else{
+        setPunishments(data.data)
+      }
+      setLoadingPunishments(false)
+    })
+  }
+  function toggleActive(punishId){
+    setPunishments([])
+    setLoadingPunishments(true)
+    fetch(baseUrlPunishment + "/"+punishId,
+      {
+        headers:{
+          Authorization:props.token
+        },
+        method:"PATCH"
+      }).then(res=>{return res.json();}).then(data=>{
+      if(data.error != null){
+        setPunishmentsError(data.error)
+      }else{
+        fetchPunishments()
+      }
+    })
+  }
+  useEffect(()=>{
+    fetchPunishments()
+  },[])
   return (
     <div className='fullpage-center' style={{ position: "fixed", zIndex: 10, top: "0px", left: "0px", backgroundColor: "rgba(12, 11, 12, 0.74)" }}>
       <Card style={{width:"800px",maxWidth:"100%"}}>
-        <h3 className='text-center'>Punishments of {user.username}.</h3>
-        {(punishments != null && punishments.length == 0) && <Alert variant='primary'>This user does not have any punishments.</Alert>}
+        <h3 className='text-center'>Punishments of '{user.username}'.</h3>
+        {punishmentsError && <div className='d-flex w-100 justify-content-center'><Alert className='w-50' variant='danger'>{punishmentsError}</Alert></div>}
+        {(punishments != null && punishments.length == 0 && !loadingPunishments && !punishmentsError) && <div className='d-flex w-100 justify-content-center'><Alert className='w-50' variant='primary'>This user does not have any punishments.</Alert></div>}
+        {(loadingPunishments) && <div className='d-flex w-100 justify-content-center'><Spinner></Spinner></div>}
   {punishments.map((punishment)=>
   <>
     <div class="punishments-container">
       <div class="punishment-id"><p>ID: {punishment.id}</p></div>
       <div class="punishment-reason"><p>Reason: {punishment.reason}</p></div>
-      <div class="punishment-active"><p>Active: {punishment.active}</p></div>
-      <div class="punishment-actions"></div>
-      <div class="punishment-by"><p>Made by: {punishment.author_username}</p></div>
+      <div class="punishment-active"><p>Active: {Boolean(punishment.is_active).toString()}</p></div>
+      <div class="punishment-actions"><Button disabled={!activeButton} onClick={(e)=>{toggleActive(punishment.id);}}>{Boolean(punishment.is_active) ? "Deactivate punishment" : "Activate punishment"}</Button></div>
+      <div class="punishment-by"><p>Made by: {punishment.author_username}<br></br>Type: {punishment.type}</p></div>
       <div class="punishment-created-at"><p>Created at: {new Date(punishment.created_at * 1000).toLocaleString()}</p></div>
       <div class="punishment-expires-at"><p>Expires: {punishment.expires != null ? new Date(punishment.expires * 1000).toLocaleString() : "Never"}</p></div>
     </div>
     <br></br>
-    </>)}</Card></div>)
+    
+    </>)}<div className='d-flex w-100 justify-content-center'><Button variant='primary' onClick={(e)=>{props.setDisplayPunishments(false);}}>Close</Button></div></Card></div>)
 }
 
 function UsersDisplay(props){
   const user = props.user
   const [displayPunishments, setDisplayPunishments] = useState(false)
+  const [punishmentControl, setPunishmentControl] = useState(false)
+  const [punishType, setPunishType] = useState("mute");
+  const [reason, setReason] = useState('');
+  const [doesExpire, setDoesExpire] = useState(true);
+  const [expire, setExpire] = useState(+ new Date())
+  const [disabledButtons, setDisabledButtons] = useState(false)
+  const [errorSubmit, setErrorSubmit] = useState("")
+  const [successSubmit, setSuccessSubmit] = useState("")
+  function handleSubmit(e){
+    e.preventDefault();
+    setDisabledButtons(true)
+    fetch(baseUrlPunishment, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: props.token
+      },
+      body: JSON.stringify({user_id: user.id, expires: (!doesExpire ? null : expire / 1000), reason: reason, type: punishType})
+    }).then(res=>{return res.json();}).then(data=>{
+      if(data.error){
+        setErrorSubmit(data.error)
+      }else{
+        setSuccessSubmit(data.message)
+      }
+      setDisabledButtons(false)
+
+    })
+  }
   return <>
-    {displayPunishments && <PunishmentsDisplay user={user}></PunishmentsDisplay>}
+    {displayPunishments && <PunishmentsDisplay user={user} token={props.token} setDisplayPunishments={setDisplayPunishments}></PunishmentsDisplay>}
+    {punishmentControl && <div className='fullpage-center' style={{ position: "fixed", zIndex: 10, top: "0px", left: "0px", backgroundColor: "rgba(12, 11, 12, 0.74)" }}>
+    <Card style={{width:"400px",maxWidth:"100%"}}>
+      <h3 className='text-center'>Punish user '{user.username}'</h3>
+      <Form className='d-flex w-100 justify-content-around flex-wrap' onSubmit={handleSubmit}>
+      <div style={{ "width": "380px", maxWidth:"100%" }}>
+              <Form.Label>Expires at</Form.Label>
+              <CDatePicker disabled={!doesExpire} onDateChange={(e) => { setExpire(+e) }} date={new Date(expire).toLocaleString("en-us").replace(",","")} timepicker />
+              <Form.Check 
+            type="switch"
+            label={"Does expire?"}
+            checked={doesExpire}
+            onChange={(e)=>{setDoesExpire(e.target.checked)}}
+          />
+            </div>
+      <div style={{width:"380px",maxWidth:"100%"}}>
+          <Form.Label>Type</Form.Label>
+              <InputGroup data-bs-theme="dark" className="" >
+              <InputGroup.Text id="basic-addon1"><svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="#e8eaed"><path d="m260-520 220-360 220 360H260ZM700-80q-75 0-127.5-52.5T520-260q0-75 52.5-127.5T700-440q75 0 127.5 52.5T880-260q0 75-52.5 127.5T700-80Zm-580-20v-320h320v320H120Zm580-60q42 0 71-29t29-71q0-42-29-71t-71-29q-42 0-71 29t-29 71q0 42 29 71t71 29Zm-500-20h160v-160H200v160Zm202-420h156l-78-126-78 126Zm78 0ZM360-340Zm340 80Z"/></svg></InputGroup.Text>
+              <Form.Select onInput={(e) => {setPunishType(e.target.value);}} value={punishType} aria-label="Default select example">
+                <option value="mute">Mute</option>
+                <option value="ban">Ban</option>
+              </Form.Select></InputGroup>
+        </div>
+        <div style={{ "width": "380px",maxWidth:"100%" }}>
+              <Form.Label>Reason</Form.Label>
+              <InputGroup data-bs-theme="dark" className="mb-3" >
+                <InputGroup.Text id="basic-addon1"><svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="#e8eaed"><path d="M420-160v-520H200v-120h560v120H540v520H420Z" /></svg></InputGroup.Text>
+                <Form.Control
+                  id='create-new-name'
+                  placeholder="Reason"
+                  aria-label="Reason"
+                  aria-describedby="basic-addon1"
+                  onInput={(e) => { setReason(e.target.value) }}
+                  value={reason}
+                />
+              </InputGroup>
+            </div>
+            
+            <div className='w-100'></div><div className='d-flex w-100 justify-content-center'>
+              <ButtonGroup className='mb-2'>
+            <Button disabled={disabledButtons} onClick={(e)=>{setPunishmentControl(!punishmentControl);}}>Close</Button><Button disabled={disabledButtons} variant='danger' type='submit' style={{color:"white"}}>Submit</Button>
+            </ButtonGroup></div>
+      </Form>
+      {errorSubmit && (
+              <Alert variant="danger" onClose={() => setErrorSubmit('')} dismissible>
+                {errorSubmit}
+              </Alert>
+              )}
+              {successSubmit && (
+              <Alert variant="success" onClose={() => setSuccessSubmit('')} dismissible>
+                {successSubmit}
+              </Alert>
+              )}
+    </Card>
+    </div>}
     <div class="users-container">
       <div class="users-userid"><p>ID: {user.id}</p></div>
       <div class="users-actions">
         <ButtonGroup>
-          <Button variant='warning' style={{color:"white"}}>Mute</Button>
-          <Button variant='danger' style={{color:"white"}}>Ban</Button>
-          <Button variant='primary'>View punishments</Button>
+          <Button variant='warning' style={{color:"white"}} onClick={(e)=>{setPunishType("mute");setPunishmentControl(true);}}>Mute</Button>
+          <Button variant='danger' style={{color:"white"}} onClick={(e)=>{setPunishType("ban");setPunishmentControl(true);}}>Ban</Button>
+          <Button variant='primary' onClick={(e)=>{setDisplayPunishments(!displayPunishments);}}>View punishments</Button>
         </ButtonGroup>
       </div>
       <div class="users-createdat"><p>Created at: {new Date(user.created_at * 1000).toLocaleString()}</p></div>
@@ -748,10 +875,10 @@ function UsersForm(props){
     <Container className="mt-1 dark-theme" data-bs-theme="dark" >
       <Row className="justify-content-md-center" >
         <Col md={4} className="login-block" style={{ width: "800px", maxWidth: "100%" }}>
-          <p className='text-center'>Enter user ID or username to start searching.</p>
+          <p className='text-center'>Enter User ID or username to start searching.</p>
             <div className='d-flex justify-content-center'>
             <div style={{width:"400px"}}> 
-            <Form.Label>Username or UserID</Form.Label>
+            <Form.Label>Username or User ID</Form.Label>
             <InputGroup className="mb-3">
               <InputGroup.Text id="basic-addon1"><svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="#e8eaed"><path d="M480-480q-66 0-113-47t-47-113q0-66 47-113t113-47q66 0 113 47t47 113q0 66-47 113t-113 47ZM160-160v-112q0-34 17.5-62.5T224-378q62-31 126-46.5T480-440q66 0 130 15.5T736-378q29 15 46.5 43.5T800-272v112H160Zm80-80h480v-32q0-11-5.5-20T700-306q-54-27-109-40.5T480-360q-56 0-111 13.5T260-306q-9 5-14.5 14t-5.5 20v32Zm240-320q33 0 56.5-23.5T560-640q0-33-23.5-56.5T480-720q-33 0-56.5 23.5T400-640q0 33 23.5 56.5T480-560Zm0-80Zm0 400Z"/></svg></InputGroup.Text>
               <Form.Control
@@ -780,7 +907,7 @@ function UsersForm(props){
             { isLoadingUsers &&
               <div className='d-flex justify-content-center'><Spinner></Spinner></div>
             }
-            {usersData != null && usersData.map((user)=><UsersDisplay user={user}></UsersDisplay>
+            {usersData != null && usersData.map((user)=><UsersDisplay token={props.token} user={user}></UsersDisplay>
             )}
           </div>
         </Col>
@@ -840,25 +967,11 @@ const Index = () => {
     }
 
   },[])
-  return <>
-  <div className='fullpage-center-vertical dark-theme w-100'>
-    <MainNavbar token={token} username={userData?.username || "Unknown"}></MainNavbar>
-    {((userData != null && Boolean(userData.is_admin)) && <>
-      <Form.Check 
-      type="switch"
-      label="Admin mode"
-      value={adminMode}
-      onChange={(e)=>{setAdminMode(e.target.checked);if(!e.target.checked){setCategoriesMode(false);setSubmissionsMode(false);}}}
-    /></>)}
-    {(adminMode && <>
-      <Form.Check 
-        type="switch"
-        label="Show submissions"
-        value={submissionsMode}
-        onChange={(e)=>{setSubmissionsMode(e.target.checked);
-          setPostsData(null)
+
+  useEffect(()=>{
+    setPostsData(null)
           setIsLoadingPosts(true)
-          if(e.target.checked){
+          if(submissionsMode){
             fetchSubmissions(data =>{
               setPostsData(data.data)
               setIsLoadingPosts(false)
@@ -869,18 +982,34 @@ const Index = () => {
               setIsLoadingPosts(false)
             })
           }
-        }}
+  }, [submissionsMode])
+  return <>
+  <div className='fullpage-center-vertical dark-theme w-100'>
+    <MainNavbar token={token} username={userData?.username || "Unknown"}></MainNavbar>
+    {((userData != null && Boolean(userData.is_admin)) && <>
+      <Form.Check 
+      type="switch"
+      label="Admin mode"
+      checked={adminMode}
+      onChange={(e)=>{setAdminMode(e.target.checked);if(!e.target.checked){setSubmissionsMode(false);}}}
+    /></>)}
+    {(adminMode && <>
+      <Form.Check 
+        type="switch"
+        label="Show submissions"
+        checked={submissionsMode}
+        onChange={(e)=>{setSubmissionsMode(e.target.checked);}}
       />
       <Form.Check 
       type="switch"
       label="Manage categories"
-      value={categoriesMode}
+      checked={categoriesMode}
       onChange={(e)=>{setCategoriesMode(e.target.checked);}}
       
     /><Form.Check 
     type="switch"
     label="Manage users"
-    value={usersMode}
+    checked={usersMode}
     onChange={(e)=>{setUsersMode(e.target.checked);}}
     
   /></>)}

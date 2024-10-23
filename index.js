@@ -141,7 +141,7 @@ function sendError(res, code, error, errcode){
   return res.status(code).json({"error":error, "code":code, "errcode":errcode})
 }
 
-app.all('/api/:reqtype/:arg1?/:arg2?', (req, res) => {
+app.all('/api/:reqtype/:arg1?/:arg2?/:arg3?', (req, res) => {
   upload(req, res, (err) => {
   let current_account = null
   let token = req.headers.authorization
@@ -170,6 +170,7 @@ app.all('/api/:reqtype/:arg1?/:arg2?', (req, res) => {
       const reqtype = req.params.reqtype
       const arg1 = req.params.arg1
       const arg2 = req.params.arg2
+      const arg3 = req.params.arg3
       switch (reqtype) {
         case "sign-up":
           if (req.method.toLowerCase() != "post") {
@@ -235,14 +236,19 @@ VALUES (?, ?, ?, strftime('%s'), strftime('%s'), ?)`, [username, email, password
               return sendError(res, 400, "Invalid email/username or password.", 39823)
             }
             let acc = rows[0]
-
-            db.all("UPDATE users SET last_visit_at = strftime('%s') WHERE id = ?", [acc.id], (err, rows) => {
-              if (err) {
-                console.log(87953)
-                console.log(err)
+            db.all("SELECT * FROM punishments WHERE user_id = ? AND is_active = TRUE AND (expires IS NULL OR expires > strftime('%s') AND type = 'ban')", [acc.id],(err,rows)=>{
+              if(rows.length > 0){
+                return res.status(403).json({"message":"Your account has been banned.",code:403,ban:{"reason":rows[0].reason,"expires":rows[0].expires}})
               }
-              return res.status(200).json({ "message": "Logged in successfully.", "code": 200, "token": acc.token })
+              db.all("UPDATE users SET last_visit_at = strftime('%s') WHERE id = ?", [acc.id], (err, rows) => {
+                if (err) {
+                  console.log(87953)
+                  console.log(err)
+                }
+                return res.status(200).json({ "message": "Logged in successfully.", "code": 200, "token": acc.token })
+              })
             })
+            
           })
           break
         case "user":
@@ -259,24 +265,38 @@ VALUES (?, ?, ?, strftime('%s'), strftime('%s'), ?)`, [username, email, password
           if (arg1 == null || arg1 == "") {
             return res.status(200).json({ "code": 200, "message": "Fetched account details successfully.", "data": (accinfo) })
           }
-          db.all("SELECT * FROM users WHERE id = ?", [arg1], (err, rows) => {
-            if (err) {
-              console.log(74886)
-              console.log(err)
+          
+          if(arg2 == "" || arg2 == null){
+            db.all("SELECT * FROM users WHERE id = ?", [arg1], (err, rows) => {
+              if (err) {
+                console.log(74886)
+                console.log(err)
+              }
+              if (rows.length <= 0) {
+                return sendError(res, 404, "Account not found.", 45654)
+              }
+              let foundacc = rows[0]
+              let accinfo = {
+                "username": foundacc.username,
+                "id": foundacc.id,
+                "created_at": foundacc.created_at,
+                "last_visit_at": foundacc.last_visit_at,
+                "is_admin": foundacc.is_admin
+              }
+              return res.status(200).json({ "code": 200, "message": "Fetched account details successfully.", "data": (accinfo) })})
+            }else if(arg2 == "punishments"){
+              if(!current_account.is_admin && arg1 != current_account.id){
+                return sendError(res, 403, "Forbidden.", 20334)
+              }
+              db.all("SELECT punishments.*, users.username AS author_username  FROM punishments JOIN users ON punishments.author_id = users.id WHERE punishments.user_id = ?; ",[arg1],(err,rows)=>{
+                if (err) {
+                  console.log(34543)
+                  console.log(err)
+                }
+
+                res.status(200).json({message:"Fetched user punishments successfully.", code:200, data:rows})
+              })
             }
-            if (rows.length <= 0) {
-              return sendError(res, 404, "Account not found.", 45654)
-            }
-            let foundacc = rows[0]
-            let accinfo = {
-              "username": foundacc.username,
-              "id": foundacc.id,
-              "created_at": foundacc.created_at,
-              "last_visit_at": foundacc.last_visit_at,
-              "is_admin": foundacc.is_admin
-            }
-            return res.status(200).json({ "code": 200, "message": "Fetched account details successfully.", "data": (accinfo) })
-          })
           break
         case "posts":
           if (current_account == null) {
@@ -296,7 +316,7 @@ VALUES (?, ?, ?, strftime('%s'), strftime('%s'), ?)`, [username, email, password
           } else if (arg1 == "submissions") {
 
             if(!current_account.is_admin){
-              return sendError(res, 403, "Forbidden.", 20034)
+              return sendError(res, 403, "Forbidden.", 20124)
             }
 
             db.all("SELECT posts.id, posts.author_id, users.username AS author_username, posts.location, posts.name, posts.created_at, posts.category_id, posts.is_approved, categories.name AS category_name, posts.happening_at, posts.image_url FROM posts JOIN users ON posts.author_id = users.id JOIN categories ON posts.category_id = categories.id WHERE posts.is_approved = FALSE ORDER BY posts.created_at DESC;", [], (err, rows) => {
@@ -354,6 +374,7 @@ VALUES (?, ?, ?, strftime('%s'), strftime('%s'), ?)`, [username, email, password
             return sendError(res, 400, "Invalid category.",6542)
           }
           function after2(imageurl){
+
             db.run("INSERT INTO posts (author_id, created_at, name, location, happening_at, image_url, category_id) VALUES (?, strftime('%s'), ?, ?, ?, ?, ?)",
               [current_account.id, createname, createlocation, createtime, imageurl, createcategory], (err)=>{
                 if (err) {
@@ -365,24 +386,32 @@ VALUES (?, ?, ?, strftime('%s'), strftime('%s'), ?)`, [username, email, password
 
             return res.status(200).json({"message":"Post was submitted successfully, please wait for webiste administrators to approve your post."})
           }
-          db.all("SELECT * FROM categories WHERE id = ? AND is_hidden = FALSE AND is_approved = TRUE",[createcategory],(err,rows)=>{
+          db.all("SELECT * FROM punishments WHERE user_id = ? AND is_active = TRUE AND (expires IS NULL OR expires > strftime('%s') AND type = 'mute')",[current_account.id],(err,rows)=>{
             if (err) {
-              console.log(21544)
+              console.log(21614)
               console.log(err)
             }
-            if(rows.length <= 0){
-              return sendError(res, 400, "Invalid category.")
+            if(rows.length > 0){
+              return res.status(200).json({message:"You have been muted from posting events.", code:200, mute:{reason:rows[0].reason,expires:rows[0].expires}})
             }
-            if(req.file){
-              uploadFile(req.file.path,(res)=>{
-                deleteFile(req.file.path)
-                after2(res.data.files[0].url)
-              })
-            }else{
-              after2("https://qu.ax/BSogD.png")
-            }
-          })
-
+            db.all("SELECT * FROM categories WHERE id = ? AND is_hidden = FALSE AND is_approved = TRUE",[createcategory],(err,rows)=>{
+              if (err) {
+                console.log(21544)
+                console.log(err)
+              }
+              if(rows.length <= 0){
+                return sendError(res, 400, "Invalid category.")
+              }
+              if(req.file){
+                uploadFile(req.file.path,(res)=>{
+                  deleteFile(req.file.path)
+                  after2(res.data.files[0].url)
+                })
+              }else{
+                after2("https://qu.ax/BSogD.png")
+              }
+            })
+        })
           
           break
         case "create-category":
@@ -413,17 +442,17 @@ VALUES (?, ?, ?, strftime('%s'), strftime('%s'), ?)`, [username, email, password
           }
           switch(req.method.toLowerCase()){
             case "get":
-              db.all("SELECT * FROM categories WHERE id = ? "+(!current_account.is_admin ? "AND is_hidden = FALSE AND is_approved = TRUE" : ""), [arg1],(err,rows)=>{
-                if (err) {
-                  console.log(544654)
-                  console.log(err)
-                }
-                if(rows.length <= 0){
-                  return sendError(res, 404, "Not found.", 54354)
-                }else{
-                  return res.status(200).json({"code":200,"message":"Fetched category successfully.","data":rows[0]})
-                }
-              })
+                db.all("SELECT * FROM categories WHERE id = ? "+(!current_account.is_admin ? "AND is_hidden = FALSE AND is_approved = TRUE" : ""), [arg1],(err,rows)=>{
+                  if (err) {
+                    console.log(544654)
+                    console.log(err)
+                  }
+                  if(rows.length <= 0){
+                    return sendError(res, 404, "Not found.", 54354)
+                  }else{
+                    return res.status(200).json({"code":200,"message":"Fetched category successfully.","data":rows[0]})
+                  }
+                })
               break
             case "delete":
               if (!current_account.is_admin) {
@@ -618,6 +647,88 @@ VALUES (?, ?, ?, strftime('%s'), strftime('%s'), ?)`, [username, email, password
             }
             return res.status(200).json({"message":"Successfully found users.","code":200,"data":rows})
           })
+          break
+        case "punishment":
+          if (current_account == null) {
+            return sendError(res, 401, "Unauthorized.", 35788)
+          }
+          switch(req.method.toLowerCase()){
+            case "get":
+              db.all("SELECT punishments.*, users.username AS author_username  FROM punishments  JOIN users ON punishments.author_id = users.id  WHERE punishments.id = ?;",[arg1],(err,rows)=>{
+                if (err) {
+                  console.log(26354)
+                  console.log(err)
+                }
+                if(rows.length > 0){
+                  if(rows[0].user_id == current_account.id || rows[0].author_id == current_account.id || current_account.is_admin){
+                    return res.status(200).json({"message":"Fetched punishment successfully.", "code":200, "data":rows[0]})
+                  }else{
+                    return sendError(res,403,"Forbidden.",3543);
+                  }
+                }else{
+                  return sendError(res,404,"No punishment found by ID.",3543);
+                }
+              })
+              break
+            case "patch":
+              if(!current_account.is_admin){
+                return sendError(res,403,"Forbidden.",35434);
+              }
+              db.run("UPDATE punishments SET is_active = NOT is_active WHERE id = ?;",[arg1],(err)=>{
+                if (err) {
+                  console.log(22354)
+                  console.log(err)
+                }
+                return res.status(200).json({"message":"Toggled punishment's is_active property successfully.","code":200})
+              })
+              break
+            case "post":
+              if(!current_account.is_admin){
+                return sendError(res,403,"Forbidden.",35434);
+              }
+              let target_user = req.body.user_id
+              let expires = req.body.expires || null
+              let type = req.body.type.toLowerCase()
+              let reason = req.body.reason
+              if(isNaN(target_user)){
+                return sendError(res,400,"Invalid user ID.",33434);
+              }
+
+              if(type != "mute" && type != "ban"){
+                return sendError(res,400,"Invalid punishment type, has to be either 'mute' or 'ban'.",31434);
+              }
+              
+              if(expires != null && expires < ((+ new Date()) / 1000)){
+                return sendError(res,400,"Invalid expiration date.",31434);
+              }
+              let query = "INSERT INTO punishments (author_id, user_id, type, created_at, expires) VALUES (?, ?, ?, strftime('%s'), ?)"
+              let values = [current_account.id, target_user, type, expires]
+              if(reason){
+                values.push(reason)
+                query = "INSERT INTO punishments (author_id, user_id, type, created_at, expires, reason) VALUES (?, ?, ?, strftime('%s'), ?, ?)"
+              }
+              
+              db.run(query, values,(err)=>{
+                if (err) {
+                  console.log(22354)
+                  console.log(err)
+                }
+                if(type== "ban"){
+                  let newtoken = b64e(target_user).replaceAll("=","") +"."+makeid(16)
+                  db.run("UPDATE users SET token = ? WHERE id = ?",[newtoken, target_user],(err)=>{
+                    if (err) {
+                      console.log(22324)
+                      console.log(err)
+                    }
+                    return res.status(200).json({"message":"Punished user successfully.",code:200});
+                  })
+                }
+                
+              })
+              break
+            default:
+              return sendError(res, 405, "Method not allowed.", 126643)
+          }
           break
         default:
           return sendError(res, 400, "Invalid request type.", 102)

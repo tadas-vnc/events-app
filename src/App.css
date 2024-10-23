@@ -111,9 +111,12 @@ select > option{
 
 .punishments-container > div{
   text-align: center;
-  border: 2px solid rgb(45, 45, 49);
+  border: 2px solid rgb(90, 90, 99);
+  align-content: center;
 }
-
+.punishments-container > div > p {
+  margin: 0;
+}
 .users-container {  display: grid;
   grid-template-columns: 1fr 1fr 1fr 1fr;
   grid-template-rows: 1fr 1fr 1fr;
