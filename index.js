@@ -722,6 +722,8 @@ VALUES (?, ?, ?, strftime('%s'), strftime('%s'), ?)`, [username, email, password
                     }
                     return res.status(200).json({"message":"Punished user successfully.",code:200});
                   })
+                }else{
+                  return res.status(200).json({"message":"Punished user successfully.",code:200});
                 }
                 
               })

@@ -1,70 +1,95 @@
-# Getting Started with Create React App
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+# App Documentation / Programos Dokumentacija
 
-## Available Scripts
+## Showcase / Demonstracija
 
-In the project directory, you can run:
+https://files.offshore.cat/hmw21oFZ.mp4
 
-### `npm start`
+---
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in your browser.
+## Language / Kalba
 
-The page will reload when you make changes.\
-You may also see any lint errors in the console.
+- [English](#english "Goto english")
+- [Lietuvių (Lithuanian)](#kaip-paleisti-programą "Goto kaip-paleisti-programą")
 
-### `npm test`
+---
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+## English
 
-### `npm run build`
+### How to Start the Application
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+1. **Frontend**: Navigate to the 'events-app' directory in your terminal and type the following command:
+   ```bash
+   npm start
+   ```
+   This will start the frontend of the application.
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+2. **Backend**: Stay in the same directory and type the following command:
+   ```bash
+   node index.js
+   ```
+   This will start the backend of the application.
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+### Testing the Application
 
-### `npm run eject`
+1. Once both the frontend and backend are running, open your web browser and go to:
+   ```
+   http://localhost:3000
+   ```
 
-**Note: this is a one-way operation. Once you `eject`, you can't go back!**
+### Test Accounts
 
-If you aren't satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
+You can use the following accounts to test the application:
 
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you're on your own.
+- **User Account 1**:
+  - Username: `test`
+  - Password: `12qwasQW`
 
-You don't have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn't feel obligated to use this feature. However we understand that this tool wouldn't be useful if you couldn't customize it when you are ready for it.
+- **User Account 2**:
+  - Username: `test2`
+  - Password: `qwqw12QW`
 
-## Learn More
+- **Admin Account**:
+  - Username: `admin`
+  - Password: `12qwasZX`
 
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
+---
 
-To learn React, check out the [React documentation](https://reactjs.org/).
+## Lietuvių (Lietuvių)
 
-### Code Splitting
+### Kaip paleisti programą
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/code-splitting](https://facebook.github.io/create-react-app/docs/code-splitting)
+1. **Vieša sritis**: Įeikite į „events-app“ direktoriją terminale ir įveskite šią komandą:
+   ```bash
+   npm start
+   ```
+   Tai paleis programos viešają sritį.
 
-### Analyzing the Bundle Size
+2. **Administracinė sritis**: Įeikite į „events-app“ direktoriją ir įveskite šią komandą:
+   ```bash
+   node index.js
+   ```
+   Tai paleis programos administracinę sritį.
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size](https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size)
+### Programos testavimas
 
-### Making a Progressive Web App
+1. Kai tiek vieša sritis, tiek administracinė sritis veikia, atidarykite naršyklę ir eikite į:
+   ```
+   http://localhost:3000
+   ```
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app](https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app)
+### Testavimo paskyros
 
-### Advanced Configuration
+Galite naudoti šias paskyras programos testavimui:
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/advanced-configuration](https://facebook.github.io/create-react-app/docs/advanced-configuration)
+- **Vartotojo paskyra 1**:
+  - Vartotojo vardas: `test`
+  - Slaptažodis: `12qwasQW`
 
-### Deployment
+- **Vartotojo paskyra 2**:
+  - Vartotojo vardas: `test2`
+  - Slaptažodis: `qwqw12QW`
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/deployment](https://facebook.github.io/create-react-app/docs/deployment)
-
-### `npm run build` fails to minify
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)
+- **Administratoriaus paskyra**:
+  - Vartotojo vardas: `admin`
+  - Slaptažodis: `12qwasZX`

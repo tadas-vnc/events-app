@@ -218,7 +218,7 @@ function LoginForm() {
             return;
           }else if(data.ban != null){
             setIsLoading(false);
-            setError(data.message + "\nReason: "+ data.ban.reason + "\nExpires: " + data!= null ? new Date(data.expires*1000).toLocaleString() : "Never");
+            setError(data.message + "\nReason: "+ data.ban.reason + "\nExpires: " + (data.ban.expires != null ? new Date(data.ban.expires*1000).toLocaleString() : "Never"));
           }else{
           localStorage.setItem("token", data.token);
           window.location.href = "/";}
@@ -360,7 +360,7 @@ function MainNavbar(props){
           
           </Navbar.Collapse>
           <Navbar.Text>
-              Welcome, <a href="/profile">{props.username}</a>
+              Welcome, <a href="/#">{props.username}</a>
             </Navbar.Text>
         </Container>
       </Navbar>
